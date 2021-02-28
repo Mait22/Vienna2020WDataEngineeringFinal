@@ -1,0 +1,48 @@
+version: '3.8'
+services: 
+
+  app: 
+    build: ./
+    image: testapp45
+    ports:
+      - 4040:4040
+    depends_on: 
+      - "mongo"
+      - "postgresql"
+    environment:
+      POSTGRES_URL: "postgres://docker:password@postgres:5432/test"
+      MONGO_URL: "mongodb://mongo:27017/test"
+      PORT: "4040"
+      NODE_ENV: 'production'
+      TOKEN_SECRET: 'testtest'
+    networks:
+      - frontend
+      - backend
+
+  mongo:
+    ports: 
+      - 27017:27017
+    volumes:
+      - ./mongodata:/data/db
+    image: mongo
+    networks:
+      - backend
+
+  postgresql:
+    image: postgres
+    ports:
+      - 5400:5432
+    volumes:
+      - ./psgdata/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./psgdata/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "docker" 
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "test"
+    restart: always
+    networks:
+      - backend
+
+networks:
+  backend:
+  frontend:

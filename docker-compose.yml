@@ -1,0 +1,88 @@
+version: '3.8'
+services:
+
+  nginx: 
+    image: nginx:latest
+    container_name: reverse_proxy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certs/fullchain.pem:/etc/certs/fullchain.pem
+      - ./nginx/certs/privkey.pem:/etc/certs/privkey.pem
+      - ./nginx/certs/ssl.pass:/etc/certs/ssl.pass
+      - ./nginx/cache:/data/nginx/cache
+    ports:
+      - 80:80
+      - 443:443
+    expose:
+      - 443
+    environment: 
+      - APPLICATION_URL= https://milestoneJovanovicMetelitsa.localhost
+    depends_on:
+      - "frontend_vue"
+      - "backend_server"
+    networks:
+      - frontend
+
+  frontend_vue:
+    image: frontend_vue
+    container_name: frontend_vue 
+    build: 
+      context: ./frontend
+    ports:
+      - 8080:80
+    depends_on:
+      - "backend_server" 
+      - "mongo"
+      - "postgresql"
+    restart: on-failure
+    networks:
+      - frontend
+
+  backend_server: 
+    container_name: backend_server 
+    build: ./backend
+    image: backend_server
+    ports:
+      - 4040:4040
+    depends_on: 
+      - "mongo"
+      - "postgresql"
+    environment:
+      POSTGRES_URL: "postgres://docker:password@postgres:5432/test"
+      MONGO_URL: "mongodb://mongo:27017/test"
+      PORT: "4040"
+      NODE_ENV: 'production'
+      TOKEN_SECRET: 'testtest'
+    restart: on-failure
+    networks:
+      - frontend
+      - backend
+
+  mongo:
+    ports: 
+      - 27017:27017
+    volumes:
+      - ./databasesDataVolumes/mongodata:/data/db
+    image: mongo
+    networks:
+      - backend
+
+  postgresql:
+    image: postgres
+    ports:
+      - 5400:5432
+    volumes:
+      - ./databasesDataVolumes/psgdata/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./databasesDataVolumes/psgdata/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "docker" 
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "test"
+    restart: always
+    networks:
+      - backend
+
+networks:
+  backend:
+  frontend:
+
